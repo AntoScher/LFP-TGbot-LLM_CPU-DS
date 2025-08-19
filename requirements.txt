@@ -12,6 +12,10 @@ sentence-transformers==2.2.2
 python-dotenv==1.0.0
 SQLAlchemy==2.0.20
 
+# Новые зависимости для усовершенствованного бота
+requests>=2.31.0  # Для DeepSeek API
+uuid  # Встроенный модуль Python
+
 # Дополнительные зависимости для обработки документов
 unstructured==0.10.30  # Для загрузки PDF/DOCX
 pypdf==3.17.0  # Обработка PDF
