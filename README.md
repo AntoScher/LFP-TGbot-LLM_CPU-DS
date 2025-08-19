@@ -1,25 +1,23 @@
-# AI-ассистент для отдела продаж
+# AI-ассистент для отдела продаж (CPU-оптимизированная версия)
 
 Telegram-бот с RAG-архитектурой для ответов на вопросы клиентов с использованием:
-- Языковой модели Qwen2-1.5B-Instruct
+- Языковой модели Qwen2-1.5B-Instruct (оптимизировано для CPU)
 - Векторного поиска по базе знаний (ChromaDB)
 - Логирования диалогов в SQLite/PostgreSQL
 
 ## 🚀 Возможности
 
 - **RAG-архитектура**: Поиск релевантной информации в базе знаний
-- **Мультиплатформенность**: Поддержка CPU, XPU (Intel Arc), CUDA
+- **CPU-оптимизация**: Полностью оптимизировано для работы на CPU
 - **Логирование**: Сохранение всех диалогов в базу данных
-- **Docker**: Готовая конфигурация для развертывания
-- **Масштабируемость**: Поддержка PostgreSQL для продакшена
+- **Простота**: Минимальные зависимости, легкая настройка
+- **Стабильность**: Без экспериментальных функций
 
 ## 📋 Требования
 
 - Python 3.10+ (рекомендуется 3.10)
-- 8+ GB RAM (для работы с 1.5B-моделью)
-- NVIDIA GPU с 8+ GB VRAM (опционально)
-- Intel Arc GPU с 2+ GB VRAM (опционально, для XPU)
-- (Для OpenVINO) `openvino>=2024.2.0`, `optimum-intel>=1.17.0`
+- 4+ GB RAM (для работы с 1.5B-моделью на CPU)
+- CPU с поддержкой AVX/AVX2 (большинство современных процессоров)
 
 ## 🛠️ Установка
 
@@ -70,27 +68,30 @@ INFERENCE_BACKEND=cpu
 ANONYMIZED_TELEMETRY=false
 ```
 
-### 4. Индексация базы знаний
+### 4. Запуск бота
 
-**Важно:** Индексация нужна только один раз и при обновлении базы знаний:
+#### 🚀 Простой запуск (рекомендуется):
 ```powershell
-python .\ingest.py
-```
-
-### 5. Запуск бота
-
-#### 🚀 Рекомендуемый способ - Стартовый скрипт:
-```powershell
-.\start_simple.ps1
+.\start_cpu_optimized.ps1
 ```
 
 Скрипт автоматически:
 - ✅ Активирует виртуальное окружение
 - ✅ Проверяет Python
-- ✅ Показывает сравнение производительности
-- ✅ Предлагает выбор режима работы (CPU/OpenVINO)
-- ✅ Устанавливает переменные окружения
+- ✅ Устанавливает CPU-оптимизированные настройки
+- ✅ Загружает модель Qwen2-1.5B-Instruct
+- ✅ Инициализирует векторную базу знаний
 - ✅ Запускает бота
+
+#### 📊 Мониторинг запуска:
+```powershell
+.\monitor_bot.ps1
+```
+
+Показывает:
+- ⏳ Процесс загрузки модели
+- ✅ Статус инициализации
+- 🎉 Готовность к работе
 
 #### 🔧 Ручной запуск:
 
@@ -98,134 +99,118 @@ python .\ingest.py
 # Активация окружения
 .venv\Scripts\Activate.ps1
 
-# Вариант A: CPU (PyTorch) - РЕКОМЕНДУЕТСЯ
+# CPU-оптимизированный режим
 $env:INFERENCE_BACKEND="cpu"
 $env:DEVICE="cpu"
+$env:MODEL_NAME="Qwen/Qwen2-1.5B-Instruct"
+$env:MODEL_MAX_LENGTH="512"
+$env:MODEL_TEMPERATURE="0.7"
+$env:OMP_NUM_THREADS="4"
+$env:MKL_NUM_THREADS="4"
+$env:OPENBLAS_NUM_THREADS="4"
+$env:PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128"
+$env:TOKENIZERS_PARALLELISM="false"
 $env:PYTHONUNBUFFERED="1"
 $env:ANONYMIZED_TELEMETRY="false"
 python .\bot.py
-
-# Вариант B: OpenVINO + CPU
-$env:INFERENCE_BACKEND="openvino"
-$env:OPENVINO_DEVICE="CPU"
-$env:PYTHONUNBUFFERED="1"
-$env:ANONYMIZED_TELEMETRY="false"
-python .\bot.py
 ```
 
-## ⚙️ Режимы работы
+## ⚙️ CPU Оптимизации
 
-Проект поддерживает два основных режима инференса:
+### 📊 Производительность (тестировано на Qwen2-1.5B-Instruct)
 
-### 📊 Сравнение производительности (тестировано на Qwen2-1.5B-Instruct)
+| Параметр | Значение | Описание |
+|----------|----------|----------|
+| **Инициализация** | ~5-7 секунд | Загрузка модели и векторной БД |
+| **Время ответа** | ~13-15 секунд | Обработка запроса и генерация |
+| **Память** | ~4-6 GB RAM | Потребление оперативной памяти |
+| **CPU потоки** | 4 потока | Оптимизировано для производительности |
 
-| Режим | Инициализация | Время ответа | Рекомендация |
-|-------|---------------|--------------|--------------|
-| **CPU (PyTorch)** | ~7 секунд | ~30 секунд | ✅ **Рекомендуется** |
-| **OpenVINO + CPU** | ~25 секунд | ~2.5 минуты | ⚠️ Медленнее |
+### 🔧 Применяемые оптимизации:
 
-### 🔧 Описание режимов:
+#### **Модель:**
+- ✅ Оптимизированная модель Qwen2-1.5B-Instruct
+- ✅ torch.float32 для стабильности на CPU
+- ✅ Отключен быстрый токенизатор (use_fast=False)
+- ✅ model.eval() для режима инференса
 
-#### **CPU (PyTorch)** - **РЕКОМЕНДУЕТСЯ**
-- ✅ Быстрая инициализация (~7 сек)
-- ✅ Быстрые ответы (~30 сек)
-- ✅ Стабильная работа
-- ✅ Меньше зависимостей
-- ✅ Простая отладка
-- ✅ Совместимость с большинством систем
+#### **Генерация:**
+- ✅ max_new_tokens=512 для качественных ответов
+- ✅ temperature=0.7 для баланса креативности/точности
+- ✅ return_full_text=False для экономии памяти
+- ✅ do_sample=True с top_p=0.9
 
-#### **OpenVINO + CPU**
-- ⚠️ Медленная инициализация (~25 сек)
-- ⚠️ Медленные ответы (~2.5 мин)
-- ✅ Оптимизация для Intel CPU
-- ✅ Меньше потребление памяти
-- ⚠️ Больше зависимостей
-- ✅ Поддержка квантования
+#### **CPU/Память:**
+- ✅ OMP_NUM_THREADS=4 (оптимальные потоки)
+- ✅ MKL_NUM_THREADS=4 (Intel Math Kernel)
+- ✅ OPENBLAS_NUM_THREADS=4 (OpenBLAS)
+- ✅ PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+- ✅ TOKENIZERS_PARALLELISM=false
 
-#### **XPU (Intel Arc)** - **ЭКСПЕРИМЕНТАЛЬНЫЙ**
-- 🚧 **Экспериментальный режим** - может не работать
-- 🚧 Требует сложной настройки PyTorch с Intel GPU поддержкой
-- 🚧 Зависит от версий Intel Extension for Transformers
-- 🚧 Может требовать дополнительных драйверов
-- ⚠️ **Не рекомендуется для продакшена**
-
-### 🎯 Когда выбирать режим?
-
-**CPU (PyTorch) - рекомендуется для:**
-- Быстрых ответов
-- Разработки и отладки
-- Продакшн с ограниченными ресурсами
-- Простоты настройки
-- Первого знакомства с ботом
-- **Стабильной работы**
-
-**OpenVINO + CPU - для:**
-- Оптимизации памяти
-- Долгосрочной работы
-- Intel-специфичных оптимизаций
-- Экспериментов с квантованием
-
-**XPU (Intel Arc) - только для экспериментов:**
-- **Не рекомендуется для обычного использования**
-- Требует специальной настройки
-- Может не работать на всех системах
-- Для продвинутых пользователей
-
-### 🔄 Переключение между режимами
-
-**Через стартовый скрипт (рекомендуется):**
-```powershell
-.\start_simple.ps1
-# Выберите режим 1 (CPU) или 2 (OpenVINO)
-```
-
-**Ручное переключение:**
-```powershell
-# Остановите бота (Ctrl+C), затем:
-
-# CPU режим
-$env:INFERENCE_BACKEND="cpu"; $env:DEVICE="cpu"; python .\bot.py
-
-# OpenVINO режим
-$env:INFERENCE_BACKEND="openvino"; $env:OPENVINO_DEVICE="CPU"; python .\bot.py
-
-# XPU режим (экспериментальный)
-$env:DEVICE="xpu"; $env:INFERENCE_BACKEND="cpu"; python .\bot.py
-```
+#### **RAG:**
+- ✅ Similarity search вместо MMR
+- ✅ k=2 документа для фокусированного контекста
+- ✅ Упрощенный промпт шаблон без дублирования
 
 ## 📁 Структура проекта
 
 ```
-LFP-TGbot-LLM-RAG/
-├── bot.py                 # Основной файл бота
-├── chains.py              # LangChain цепи и LLM
-├── embeddings.py          # Векторное хранилище
-├── ingest.py              # Скрипт индексации базы знаний
-├── start_simple.ps1       # Стартовый скрипт (рекомендуется)
-├── flask_app/             # Flask приложение
+LFP-TGbot-LLM_CPU-DS/
+├── bot.py                    # Основной файл бота
+├── chains.py                 # CPU-оптимизированные LangChain цепи
+├── embeddings.py             # Векторное хранилище ChromaDB
+├── system_prompt.txt         # Системный промпт (вынесен в корень)
+├── start_cpu_optimized.ps1   # CPU-оптимизированный скрипт запуска
+├── monitor_bot.ps1           # Скрипт мониторинга загрузки
+├── flask_app/                # Flask приложение
 │   ├── __init__.py
-│   └── models.py          # Модели базы данных
-├── knowledge_base/        # База знаний
-│   ├── system_prompt.txt  # Системный промпт
-│   └── *.txt, *.md        # Документы знаний
-├── logs/                  # Логи бота
-├── chroma_db/             # Векторная база данных
-├── requirements.txt       # Зависимости
-├── requirements.lock.txt  # Замороженные зависимости
-├── .env                   # Переменные окружения
-└── README.md              # Документация
+│   └── models.py             # Модели базы данных
+├── knowledge_base/           # База знаний
+│   ├── knowledge_base.md     # Основная информация
+│   ├── delivery_terms.md     # Условия доставки
+│   └── product_catalog.md    # Каталог товаров
+├── logs/                     # Логи бота
+├── chroma_db/                # Векторная база данных
+├── .venv/                    # Виртуальное окружение
+├── requirements.txt          # Основные зависимости
+├── requirements.lock.txt     # Замороженные версии для воспроизводимости
+├── .env                      # Переменные окружения (создать из .env.example)
+├── .env.example              # Пример переменных окружения
+└── README.md                 # Документация
 ```
 
 ## 🔧 Конфигурация
 
 ### Модели
-- **LLM**: Qwen2-1.5B-Instruct (по умолчанию)
+- **LLM**: Qwen2-1.5B-Instruct (CPU-оптимизированная)
 - **Embeddings**: sentence-transformers/all-MiniLM-L6-v2
 - **Vector Store**: ChromaDB
 
-### Устройства
-- **CPU**: Стандартная работа (PyTorch)
-- **CPU (OpenVINO)**: Оптимизированная работа на Intel CPU
+### Устройство
+- **CPU**: Единственный поддерживаемый режим (PyTorch с оптимизациями)
+
+### Файлы конфигурации
+
+#### `.env` - основные переменные окружения:
+```env
+TELEGRAM_TOKEN=your_bot_token_here
+HUGGINGFACEHUB_API_TOKEN=your_hf_token_here
+MODEL_NAME=Qwen/Qwen2-1.5B-Instruct
+DEVICE=cpu
+INFERENCE_BACKEND=cpu
+MODEL_MAX_LENGTH=512
+MODEL_TEMPERATURE=0.7
+ANONYMIZED_TELEMETRY=false
+```
+
+#### `requirements.txt` vs `requirements.lock.txt`:
+- **`requirements.txt`** - основные зависимости с минимальными версиями
+- **`requirements.lock.txt`** - точные версии всех пакетов для воспроизводимой установки
+
+**Рекомендация:** Используйте `requirements.lock.txt` для стабильной установки:
+```powershell
+pip install -r requirements.lock.txt
+```
 
 ## 📊 Мониторинг
 
@@ -247,73 +232,53 @@ LFP-TGbot-LLM-RAG/
 ### Частые проблемы:
 
 1. **Ошибка импорта модулей**
-   ```bash
-   pip install -r requirements.txt
+   ```powershell
+   pip install -r requirements.lock.txt
    ```
 
 2. **Недостаточно памяти**
-   - Уменьшите размер модели в `.env`
-   - Используйте CPU режим
+   - Закройте другие приложения
+   - Перезапустите бота
 
 3. **Ошибки Telegram API**
    - Проверьте `TELEGRAM_TOKEN` в `.env`
    - Убедитесь в правах бота
 
 4. **Проблемы с ChromaDB**
-   ```bash
-   # Удалите старую базу и пересоздайте
+   ```powershell
+   # Удалите старую базу и перезапустите
    Remove-Item -Recurse -Force chroma_db
-   python .\ingest.py
+   .\start_cpu_optimized.ps1
    ```
 
 5. **Ошибки стартового скрипта**
    ```powershell
    # Проверьте политику выполнения
    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-   .\start_simple.ps1
+   .\start_cpu_optimized.ps1
    ```
+
+6. **Медленная работа**
+   - Проверьте загрузку CPU (должна быть 80-100% во время генерации)
+   - Убедитесь, что используются правильные переменные окружения
+   - Закройте ненужные приложения
 
 ### 🔍 Диагностика
 
 **Проверка окружения:**
 ```powershell
-python -c "import telegram, flask, langchain, transformers; print('OK')"
+python -c "import telegram, flask, langchain, transformers; print('✅ Все модули найдены')"
 ```
 
 **Проверка переменных:**
 ```powershell
-python -c "from dotenv import load_dotenv; import os; load_dotenv(); print('TELEGRAM_TOKEN:', 'OK' if os.getenv('TELEGRAM_TOKEN') else 'MISSING')"
+python -c "from dotenv import load_dotenv; import os; load_dotenv(); print('TELEGRAM_TOKEN:', '✅ OK' if os.getenv('TELEGRAM_TOKEN') else '❌ MISSING')"
 ```
 
-**Проверка базы знаний:**
+**Проверка модели:**
 ```powershell
-python .\ingest.py
+python -c "from transformers import AutoTokenizer; t = AutoTokenizer.from_pretrained('Qwen/Qwen2-1.5B-Instruct'); print('✅ Модель доступна')"
 ```
-
-**Проверка XPU (экспериментальный):**
-```powershell
-python -c "import torch; print('PyTorch version:', torch.__version__); print('XPU available:', hasattr(torch, 'xpu') and torch.xpu.is_available() if hasattr(torch, 'xpu') else False)"
-```
-
-### 🚨 Проблемы с XPU режимом
-
-**XPU режим не работает - это нормально!**
-
-Если XPU режим не запускается, это ожидаемо. Проблемы:
-
-1. **"XPU is not available, falling back to CPU"**
-   - ✅ **Нормально** - используйте CPU режим
-   - XPU требует специальной версии PyTorch
-
-2. **"Intel Extension for Transformers not available"**
-   - ✅ **Нормально** - используйте CPU режим
-   - ITREX требует сложной настройки
-
-3. **"accelerate not found"**
-   - ✅ **Нормально** - используйте CPU режим
-   - XPU режим экспериментальный
-
-**Решение:** Используйте **CPU (PyTorch)** режим для стабильной работы.
 
 ## 🤝 Вклад в проект
 
