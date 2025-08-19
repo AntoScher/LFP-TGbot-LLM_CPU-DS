@@ -134,14 +134,10 @@ async def initialize_resources():
         # Инициализация QA цепи
         try:
             logger.info("Initializing QA chain...")
-            qa_chain, system_prompt = await asyncio.to_thread(init_qa_chain, retriever)
+            qa_chain = await asyncio.to_thread(init_qa_chain, retriever)
             if not qa_chain:
                 raise ValueError("QA chain initialization returned None")
-            logger.info(f"QA chain initialized successfully with system prompt: {system_prompt[:100]}...")
-            
-            # Сохраняем system_prompt в глобальной области видимости
-            global _system_prompt
-            _system_prompt = system_prompt
+            logger.info("QA chain initialized successfully")
             
         except Exception as e:
             error_msg = f"Failed to initialize QA chain: {str(e)}"
@@ -258,6 +254,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             # Удаляем дублирующиеся пробелы и переносы строк
             import re
             answer = re.sub(r'\s+', ' ', answer).strip()
+            
+            # Проверяем качество ответа
+            if len(answer) < 20:
+                answer = "Извините, не удалось сформировать полноценный ответ. Попробуйте переформулировать вопрос."
+            elif "не знаю" in answer.lower() or "нет информации" in answer.lower():
+                answer = "К сожалению, в базе знаний нет информации по вашему вопросу. Обратитесь к менеджеру по телефону 8-800-123-45-67."
             
             logger.info(f"Generated answer length: {len(answer)} characters")
                 

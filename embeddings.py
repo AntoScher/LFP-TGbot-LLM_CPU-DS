@@ -67,8 +67,10 @@ def init_vector_store(persist_dir: Optional[str] = None) -> VectorStoreRetriever
                     embedding_function=embedder
                 )
                 retriever = vectordb.as_retriever(
-                    search_type="mmr",
-                    search_kwargs={"k": 3, "fetch_k": 10}
+                    search_type="similarity",  # Используем similarity вместо mmr для более точного поиска
+                    search_kwargs={
+                        "k": 2  # Уменьшаем количество документов
+                    }
                 )
                 logger.info("Vector database loaded successfully")
                 return retriever
@@ -89,8 +91,10 @@ def init_vector_store(persist_dir: Optional[str] = None) -> VectorStoreRetriever
             vectordb.persist()
             
             retriever = vectordb.as_retriever(
-                search_type="mmr",
-                search_kwargs={"k": 3, "fetch_k": 10}
+                search_type="similarity",  # Используем similarity вместо mmr для более точного поиска
+                search_kwargs={
+                    "k": 2  # Уменьшаем количество документов
+                }
             )
             
             logger.info("New empty vector database created successfully")

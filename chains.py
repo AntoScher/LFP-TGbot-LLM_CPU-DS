@@ -53,7 +53,7 @@ _llm_pipe = None
 _system_prompt = None
 
 
-def load_system_prompt(path: str = "knowledge_base/system_prompt.txt") -> str:
+def load_system_prompt(path: str = "system_prompt.txt") -> str:
     global _system_prompt
     if _system_prompt is None:
         try:
@@ -175,7 +175,10 @@ def init_llm_pipeline():
             temperature=0.7,
             top_p=0.9,
             repetition_penalty=1.1,
-            return_full_text=True,
+            return_full_text=False,  # Возвращаем только новый текст
+            do_sample=True,
+            pad_token_id=tokenizer.eos_token_id,
+            eos_token_id=tokenizer.eos_token_id,
             device_map="auto" if device == "xpu" and ITREX_AVAILABLE else None,
         )
         _llm_pipe = HuggingFacePipeline(pipeline=text_generation_pipeline)
@@ -190,14 +193,16 @@ def init_qa_chain(retriever):
     llm_pipe = init_llm_pipeline()
     system_prompt = load_system_prompt()
 
+    # Упрощенный промпт шаблон без дублирования системного промпта в контексте
     prompt_template = """<|im_start|>system
 {system_prompt}
 <|im_end|>
 <|im_start|>user
-Context:
 {context}
 
-Question: {question}
+Вопрос: {question}
+
+Дай четкий и структурированный ответ на основе предоставленной информации.
 <|im_end|>
 <|im_start|>assistant
 """
@@ -220,16 +225,16 @@ Question: {question}
                 template="{page_content}"
             ),
             "document_variable_name": "context",
-            "verbose": True
+            "verbose": False  # Отключаем подробный вывод для производительности
         },
         return_source_documents=False,
         input_key="question",
         output_key="result",
-        verbose=True
+        verbose=False
     )
 
     logging.info("QA chain initialized successfully")
     logging.info(f"Input key: {qa_chain.input_key}")
     logging.info(f"Output key: {qa_chain.output_key}")
 
-    return qa_chain, system_prompt
+    return qa_chain
