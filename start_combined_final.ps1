@@ -4,10 +4,18 @@
 
 Write-Host "🚀 Запуск финального объединенного бота (RAG + DeepSeek API)..." -ForegroundColor Green
 
-# Проверяем, активировано ли виртуальное окружение
-if (-not $env:VIRTUAL_ENV) {
-    Write-Host "⚠️ Виртуальное окружение не активировано. Активирую..." -ForegroundColor Yellow
+# Активируем виртуальное окружение
+Write-Host "⚠️ Активирую виртуальное окружение..." -ForegroundColor Yellow
+if (Test-Path ".\.venv\Scripts\Activate.ps1") {
     & ".\.venv\Scripts\Activate.ps1"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Ошибка активации виртуального окружения!" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "✅ Виртуальное окружение активировано" -ForegroundColor Green
+} else {
+    Write-Host "❌ Виртуальное окружение .venv не найдено!" -ForegroundColor Red
+    exit 1
 }
 
 # Основные настройки
